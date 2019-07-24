@@ -15,8 +15,7 @@ from collections import OrderedDict
 from models.moran import MORAN
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--train_nips', required=True, help='path to dataset')
-parser.add_argument('--train_cvpr', required=True, help='path to dataset')
+parser.add_argument('--train_iam', required=True, help='path to dataset')
 parser.add_argument('--valroot', required=True, help='path to dataset')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=2)
 parser.add_argument('--batchSize', type=int, default=64, help='input batch size')
@@ -29,7 +28,7 @@ parser.add_argument('--niter', type=int, default=10, help='number of epochs to t
 parser.add_argument('--lr', type=float, default=0.01, help='learning rate for Critic, default=0.00005')
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
-parser.add_argument('--MORAN', default='', help="path to model (to continue training)")
+parser.add_argument('--MORAN', default='output_bkp/36_0.pth', help="path to model (to continue training)")
 parser.add_argument('--alphabet', type=str, default='0:1:2:3:4:5:6:7:8:9:a:b:c:d:e:f:g:h:i:j:k:l:m:n:o:p:q:r:s:t:u:v:w:x:y:z:$')
 parser.add_argument('--sep', type=str, default=':')
 parser.add_argument('--experiment', default=None, help='Where to store samples and models')
@@ -65,14 +64,11 @@ if not torch.cuda.is_available():
 if torch.cuda.is_available() and not opt.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
-train_nips_dataset = dataset.lmdbDataset(root=opt.train_nips, 
+train_iam_dataset = dataset.lmdbDataset(root=opt.train_iam, 
     transform=dataset.resizeNormalize((opt.imgW, opt.imgH)), reverse=opt.BidirDecoder)
-assert train_nips_dataset
-train_cvpr_dataset = dataset.lmdbDataset(root=opt.train_cvpr, 
-    transform=dataset.resizeNormalize((opt.imgW, opt.imgH)), reverse=opt.BidirDecoder)
-assert train_cvpr_dataset
+assert train_iam_dataset
 
-train_dataset = torch.utils.data.ConcatDataset([train_nips_dataset, train_cvpr_dataset])
+train_dataset = torch.utils.data.ConcatDataset([train_iam_dataset])
 
 train_loader = torch.utils.data.DataLoader(
     train_dataset, batch_size=opt.batchSize,
@@ -169,8 +165,8 @@ def val(dataset, criterion, max_iter=1000):
             sim_preds = []
             for j in range(cpu_images.size(0)):
                 text_begin = 0 if j == 0 else length.data[:j].sum()
-                if torch.mean(preds0_prob[text_begin:text_begin+len(sim_preds0[j].split('$')[0]+'$')]).data[0] >\
-                 torch.mean(preds1_prob[text_begin:text_begin+len(sim_preds1[j].split('$')[0]+'$')]).data[0]:
+                if torch.mean(preds0_prob[text_begin:text_begin+len(sim_preds0[j].split('$')[0]+'$')]).item() >\
+                 torch.mean(preds1_prob[text_begin:text_begin+len(sim_preds1[j].split('$')[0]+'$')]).item():
                     sim_preds.append(sim_preds0[j].split('$')[0]+'$')
                 else:
                     sim_preds.append(sim_preds1[j].split('$')[0][-1::-1]+'$')
@@ -232,6 +228,13 @@ for epoch in range(opt.niter):
     i = 0
     while i < len(train_loader):
 
+        for p in MORAN.parameters():
+            p.requires_grad = True
+        MORAN.train()
+
+        cost = trainBatch()
+        loss_avg.add(cost)
+
         if i % opt.valInterval == 0:
             for p in MORAN.parameters():
                 p.requires_grad = False
@@ -247,12 +250,6 @@ for epoch in range(opt.niter):
             torch.save(MORAN.state_dict(), '{0}/{1}_{2}.pth'.format(
                         opt.experiment, epoch, i))
 
-        for p in MORAN.parameters():
-            p.requires_grad = True
-        MORAN.train()
-
-        cost = trainBatch()
-        loss_avg.add(cost)
         
         if i % opt.displayInterval == 0:
             t1 = time.time()            

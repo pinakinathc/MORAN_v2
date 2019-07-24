@@ -211,9 +211,11 @@ class ResNet(nn.Module):
 
 class ASRN(nn.Module):
 
-    def __init__(self, imgH, nc, nclass, nh, BidirDecoder=False, CUDA=True):
+    def __init__(self, imgH, imgW, nc, nclass, nh, BidirDecoder=False, CUDA=True):
         super(ASRN, self).__init__()
         assert imgH % 16 == 0, 'imgH must be a multiple of 16'
+        self.targetH = imgH
+        self.targetW = imgW
 
         self.cnn = ResNet(nc) 
 
@@ -237,6 +239,7 @@ class ASRN(nn.Module):
                 nn.init.constant(m.bias, 0)
 
     def forward(self, input, length, text, text_rev, test=False):
+        input = nn.functional.upsample(input, size=(self.targetH, self.targetW), mode='bilinear')
         # conv features
         conv = self.cnn(input)
         

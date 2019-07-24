@@ -1,12 +1,11 @@
 GPU=0
 CUDA_VISIBLE_DEVICES=${GPU} \
 python main.py \
-	--train_nips path_to_dataset \
-	--train_cvpr path_to_dataset \
-	--valroot path_to_dataset \
-	--workers 2 \
+	--train_iam ../lmdb_formater/trainset/ \
+	--valroot ../lmdb_formater/testset/ \
+	--workers 3 \
 	--batchSize 64 \
-	--niter 10 \
+	--niter 70 \
 	--lr 1 \
 	--cuda \
 	--experiment output/ \
