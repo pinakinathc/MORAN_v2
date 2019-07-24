@@ -28,7 +28,7 @@ parser.add_argument('--niter', type=int, default=10, help='number of epochs to t
 parser.add_argument('--lr', type=float, default=0.01, help='learning rate for Critic, default=0.00005')
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
-parser.add_argument('--MORAN', default='output_bkp/36_0.pth', help="path to model (to continue training)")
+parser.add_argument('--MORAN', default='working_model_weight.pth', help="path to model (to continue training)")
 parser.add_argument('--alphabet', type=str, default='0:1:2:3:4:5:6:7:8:9:a:b:c:d:e:f:g:h:i:j:k:l:m:n:o:p:q:r:s:t:u:v:w:x:y:z:$')
 parser.add_argument('--sep', type=str, default=':')
 parser.add_argument('--experiment', default=None, help='Where to store samples and models')
